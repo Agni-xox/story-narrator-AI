@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bedtime Story Narrator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #070510;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    /* === VIDEO BACKGROUND (homepage default) === */
+    #bg-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* Dark overlay on video */
+    #video-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 5, 16, 0.4);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* === GENRE ANIMATED SCENE (replaces video when genre selected) === */
+    #scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+
+    #scene.active { opacity: 1; }
+
+    /* Particles */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: float linear infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-20vh) scale(1); opacity: 0; }
+    }
+
+    /* Rain drops (Mystery, Thriller) */
+    .raindrop {
+      position: absolute;
+      width: 1px;
+      background: linear-gradient(transparent, rgba(150, 200, 255, 0.4));
+      opacity: 0;
+      animation: rain linear infinite;
+    }
+
+    @keyframes rain {
+      0% { transform: translateY(-10vh); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translateY(110vh); opacity: 0.3; }
+    }
+
+    /* Lightning flash (Thriller) */
+    .lightning {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.1);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      animation: lightning 8s ease-in-out infinite;
+    }
+
+    @keyframes lightning {
+      0%, 100% { opacity: 0; }
+      42% { opacity: 0; }
+      43% { opacity: 0.6; }
+      44% { opacity: 0; }
+      45% { opacity: 0.3; }
+      46% { opacity: 0; }
+    }
+
+    /* Shooting stars (Sci-Fi) */
+    .shooting-star {
+      position: absolute;
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(103, 232, 249, 0.7), transparent);
+      opacity: 0;
+      animation: shoot linear infinite;
+      transform-origin: left center;
+    }
+
+    @keyframes shoot {
+      0% { transform: translateX(-100px) translateY(0) rotate(-30deg); opacity: 0; }
+      5% { opacity: 1; }
+      30% { opacity: 0; }
+      100% { transform: translateX(100vw) translateY(50vh) rotate(-30deg); opacity: 0; }
+    }
+
+    /* Fireflies (Fable, Fairy Tale) */
+    .firefly {
+      position: absolute;
+      border-radius: 50%;
+      animation: firefly ease-in-out infinite;
+    }
+
+    @keyframes firefly {
+      0%, 100% { opacity: 0; transform: translate(0, 0); }
+      25% { opacity: 1; transform: translate(30px, -20px); }
+      50% { opacity: 0.6; transform: translate(-20px, -40px); }
+      75% { opacity: 1; transform: translate(15px, -10px); }
+    }
+
+    /* Fog (Mystery) */
+    .fog {
+      position: absolute;
+      width: 200%;
+      height: 100%;
+      top: 0;
+      left: -50%;
+      background:
+        radial-gradient(ellipse 40% 30% at 20% 50%, rgba(100, 140, 150, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 60% 60%, rgba(80, 120, 130, 0.1) 0%, transparent 70%),
+        radial-gradient(ellipse 35% 25% at 80% 40%, rgba(90, 130, 140, 0.08) 0%, transparent 70%);
+      animation: drift 20s linear infinite;
+    }
+
+    @keyframes drift {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(25%); }
+    }
+
+    /* Embers (Adventure) */
+    .ember {
+      position: absolute;
+      border-radius: 50%;
+      animation: ember-rise linear infinite;
+    }
+
+    @keyframes ember-rise {
+      0% { transform: translateY(100vh) translateX(0) scale(1); opacity: 0; }
+      10% { opacity: 1; }
+      50% { transform: translateY(50vh) translateX(30px) scale(0.8); opacity: 0.8; }
+      100% { transform: translateY(-10vh) translateX(-20px) scale(0.2); opacity: 0; }
+    }
+
+    /* Bubbles (Comedy) */
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(253, 224, 71, 0.3);
+      background: rgba(253, 224, 71, 0.05);
+      animation: bubble-up ease-in-out infinite;
+    }
+
+    @keyframes bubble-up {
+      0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+      10% { opacity: 0.7; }
+      50% { transform: translateY(50vh) scale(1) translateX(20px); opacity: 0.5; }
+      100% { transform: translateY(-10vh) scale(1.2) translateX(-10px); opacity: 0; }
+    }
+
+    /* Stars layer */
+    #stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(1px 1px at 10% 15%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 25% 35%, #fff 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 40% 10%, #ddd 50%, transparent 100%),
+        radial-gradient(1px 1px at 55% 45%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 70% 20%, #fff 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 85% 60%, #ddd 50%, transparent 100%),
+        radial-gradient(1px 1px at 15% 70%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 30% 85%, #fff 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 50% 75%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 65% 90%, #ddd 50%, transparent 100%),
+        radial-gradient(1px 1px at 80% 40%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 90% 80%, #fff 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 5% 50%, #ddd 50%, transparent 100%),
+        radial-gradient(1px 1px at 45% 30%, #fff 50%, transparent 100%),
+        radial-gradient(1px 1px at 95% 10%, #fff 50%, transparent 100%);
+      opacity: 0.5;
+      animation: twinkle 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.3; }
+      100% { opacity: 0.6; }
+    }
+
+    /* === CARD === */
+    .card {
+      background: rgba(16, 14, 28, 0.82);
+      border: 1px solid rgba(109, 40, 217, 0.25);
+      border-radius: 16px;
+      padding: 36px;
+      max-width: 540px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 0 40px rgba(88, 28, 135, 0.15), 0 0 80px rgba(30, 58, 138, 0.1);
+    }
+
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: #fff; }
+    .subtitle { color: #777; font-size: 0.85rem; margin-bottom: 24px; }
+
+    label {
+      display: block; font-size: 0.8rem; color: #999; margin-bottom: 6px;
+      font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    select, textarea {
+      width: 100%; padding: 10px 12px; background: #1e1e2a; border: 1px solid #333;
+      border-radius: 8px; color: #e0e0e0; font-size: 0.9rem; font-family: inherit;
+      margin-bottom: 16px; outline: none; transition: border-color 0.2s;
+    }
+    select:focus, textarea:focus { border-color: #6366f1; }
+    textarea { resize: vertical; min-height: 70px; }
+    textarea::placeholder { color: #555; }
+
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+
+    .chip {
+      padding: 6px 14px; background: #1e1e2a; border: 1px solid #333;
+      border-radius: 20px; color: #999; font-size: 0.8rem; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip:hover { border-color: #555; color: #ccc; }
+    .chip.selected { border-color: #6366f1; background: #1e1e3a; color: #fff; }
+
+    .generate-btn {
+      width: 100%; padding: 12px; background: #6366f1; color: #fff; border: none;
+      border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .generate-btn:hover:not(:disabled) { background: #5558e6; }
+    .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error {
+      background: #2a1020; border: 1px solid #5a2040; color: #f87171;
+      border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 0.85rem;
+      display: none;
+    }
+    .error.visible { display: block; }
+
+    .narration { display: none; text-align: center; }
+    .narration.visible { display: block; }
+
+    .narration-label {
+      font-size: 0.8rem; color: #777; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 20px;
+    }
+
+    .narration-text {
+      font-size: 1.05rem; line-height: 1.8; color: #e8e8f0;
+      min-height: 200px; text-align: left; margin-bottom: 24px;
+    }
+
+    .narration-text .word { opacity: 0; transition: opacity 0.3s ease; }
+    .narration-text .word.visible { opacity: 1; }
+
+    .narration-controls { display: flex; gap: 12px; }
+    .narration-controls button {
+      flex: 1; padding: 10px; border-radius: 8px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+
+    .btn-back { background: transparent; border: 1px solid #444; color: #aaa; }
+    .btn-back:hover { border-color: #666; color: #fff; }
+    .btn-replay { background: #6366f1; border: none; color: #fff; }
+    .btn-replay:hover { background: #5558e6; }
+
+    .powered-by { text-align: center; margin-top: 20px; font-size: 0.7rem; color: #444; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #fff4; border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- Homepage video background -->
+  <video id="bg-video" autoplay muted loop playsinline>
+    <source src="/bg-video.mp4" type="video/mp4" />
+  </video>
+  <div id="video-overlay"></div>
+
+  <!-- Genre animated scene (hidden until genre selected) -->
+  <div id="scene"></div>
+  <div id="stars"></div>
+
+  <div class="card">
+    <div id="form-view">
+      <h1>Bedtime Story Narrator</h1>
+      <p class="subtitle">Quick stories everyday. Pick a genre, write your opening, and listen.</p>
+
+      <label>Genre</label>
+      <div class="chip-group" id="genres">
+        <button class="chip" onclick="selectGenre(this)">Fantasy</button>
+        <button class="chip" onclick="selectGenre(this)">Sci-Fi</button>
+        <button class="chip" onclick="selectGenre(this)">Adventure</button>
+        <button class="chip" onclick="selectGenre(this)">Mystery</button>
+        <button class="chip" onclick="selectGenre(this)">Fable</button>
+        <button class="chip" onclick="selectGenre(this)">Comedy</button>
+        <button class="chip" onclick="selectGenre(this)">Fairy Tale</button>
+        <button class="chip" onclick="selectGenre(this)">Thriller</button>
+      </div>
+
+      <label>Age Group</label>
+      <div class="chip-group" id="ages">
+        <button class="chip selected" data-age="2-5" onclick="selectAge(this)">2 - 5</button>
+        <button class="chip" data-age="5-12" onclick="selectAge(this)">5 - 12</button>
+        <button class="chip" data-age="12-18" onclick="selectAge(this)">12 - 18</button>
+        <button class="chip" data-age="18+" onclick="selectAge(this)">18+</button>
+      </div>
+
+      <label for="opening">Your story opening</label>
+      <textarea id="opening" placeholder="Write a few lines to start your story..."></textarea>
+
+      <label for="voice">Narrator Voice</label>
+      <select id="voice">
+        <option value="21m00Tcm4TlvDq8ikWAM">Rachel - Calm</option>
+        <option value="TxGEqnHWrfWFTfGW9XjX">Josh - Deep</option>
+        <option value="EXAVITQu4vr4xnSDxMaL">Bella - Soft</option>
+        <option value="ErXwobaYiN019PkySvjV">Antoni - Warm</option>
+        <option value="MF3mGyEYCl7XYWbV9V6O">Elli - Expressive</option>
+      </select>
+
+      <button class="generate-btn" id="generate" onclick="generate()">Generate Story</button>
+      <div class="error" id="error"></div>
+    </div>
+
+    <div id="narration-view" class="narration">
+      <p class="narration-label">Narrating your story</p>
+      <div class="narration-text" id="narration-text"></div>
+      <div class="narration-controls">
+        <button class="btn-back" onclick="goBack()">New Story</button>
+        <button class="btn-replay" onclick="replay()">Replay</button>
+      </div>
+    </div>
+
+    <audio id="audio" style="display:none"></audio>
+
+    <div class="powered-by">
+      Powered by Cloudflare Workers AI and ElevenLabs
+    </div>
+  </div>
+
+  <script>
+    let selectedGenre = null;
+    let selectedAge = '2-5';
+    let storyWords = [];
+    let wordTimer = null;
+    let audioData = null;
+    const scene = document.getElementById('scene');
+    const bgVideo = document.getElementById('bg-video');
+    const videoOverlay = document.getElementById('video-overlay');
+
+    // Genre scene configurations
+    const genreScenes = {
+      'Fantasy': {
+        bg: 'radial-gradient(ellipse 70% 50% at 30% 70%, rgba(126, 34, 206, 0.5) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 70% 30%, rgba(180, 130, 50, 0.35) 0%, transparent 55%), radial-gradient(ellipse 80% 60% at 50% 50%, rgba(88, 28, 135, 0.2) 0%, transparent 50%)',
+        effects: ['particles', 'fireflies'],
+        particleColor: 'rgba(250, 204, 100, 0.6)',
+        particleShadow: '0 0 10px rgba(250, 204, 100, 0.4)',
+        fireflyColor: 'rgba(250, 220, 130, 0.7)',
+        fireflyShadow: '0 0 12px rgba(250, 204, 100, 0.6)',
+      },
+      'Sci-Fi': {
+        bg: 'radial-gradient(ellipse 60% 40% at 20% 30%, rgba(6, 182, 212, 0.45) 0%, transparent 55%), radial-gradient(ellipse 50% 50% at 80% 70%, rgba(37, 99, 235, 0.35) 0%, transparent 60%), radial-gradient(ellipse 80% 30% at 50% 90%, rgba(6, 182, 212, 0.2) 0%, transparent 50%)',
+        effects: ['particles', 'shooting-stars'],
+        particleColor: 'rgba(103, 232, 249, 0.5)',
+        particleShadow: '0 0 8px rgba(103, 232, 249, 0.4)',
+      },
+      'Adventure': {
+        bg: 'radial-gradient(ellipse 70% 60% at 25% 75%, rgba(180, 83, 9, 0.45) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 75% 25%, rgba(217, 119, 6, 0.3) 0%, transparent 55%), radial-gradient(ellipse 80% 40% at 50% 90%, rgba(120, 53, 15, 0.25) 0%, transparent 50%)',
+        effects: ['embers'],
+        emberColor: 'rgba(251, 146, 36, 0.7)',
+        emberShadow: '0 0 6px rgba(251, 146, 36, 0.4)',
+      },
+      'Mystery': {
+        bg: 'radial-gradient(ellipse 80% 70% at 40% 60%, rgba(15, 60, 70, 0.55) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 70% 30%, rgba(30, 80, 90, 0.35) 0%, transparent 55%), radial-gradient(ellipse 100% 50% at 50% 100%, rgba(10, 40, 50, 0.45) 0%, transparent 50%)',
+        effects: ['rain', 'fog'],
+      },
+      'Fable': {
+        bg: 'radial-gradient(ellipse 70% 60% at 30% 70%, rgba(22, 101, 52, 0.45) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 70% 30%, rgba(34, 130, 60, 0.3) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 50% 80%, rgba(20, 83, 45, 0.2) 0%, transparent 50%)',
+        effects: ['fireflies', 'particles'],
+        particleColor: 'rgba(134, 239, 172, 0.4)',
+        particleShadow: '0 0 6px rgba(134, 239, 172, 0.3)',
+        fireflyColor: 'rgba(180, 255, 180, 0.7)',
+        fireflyShadow: '0 0 10px rgba(134, 239, 172, 0.5)',
+      },
+      'Comedy': {
+        bg: 'radial-gradient(ellipse 60% 50% at 30% 70%, rgba(219, 39, 119, 0.35) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 70% 30%, rgba(234, 179, 8, 0.3) 0%, transparent 55%), radial-gradient(ellipse 70% 50% at 50% 50%, rgba(190, 24, 93, 0.15) 0%, transparent 50%)',
+        effects: ['bubbles'],
+      },
+      'Fairy Tale': {
+        bg: 'radial-gradient(ellipse 70% 60% at 30% 70%, rgba(168, 85, 247, 0.4) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 70% 30%, rgba(236, 72, 153, 0.3) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 50% 50%, rgba(192, 132, 252, 0.2) 0%, transparent 50%)',
+        effects: ['fireflies', 'particles'],
+        particleColor: 'rgba(232, 168, 255, 0.5)',
+        particleShadow: '0 0 10px rgba(232, 168, 255, 0.4)',
+        fireflyColor: 'rgba(255, 200, 240, 0.7)',
+        fireflyShadow: '0 0 12px rgba(236, 72, 153, 0.5)',
+      },
+      'Thriller': {
+        bg: 'radial-gradient(ellipse 80% 60% at 30% 80%, rgba(127, 29, 29, 0.5) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 70% 20%, rgba(153, 27, 27, 0.3) 0%, transparent 55%), radial-gradient(ellipse 100% 50% at 50% 100%, rgba(40, 5, 5, 0.4) 0%, transparent 50%)',
+        effects: ['rain', 'lightning'],
+      },
+    };
+
+    let sceneElements = [];
+
+    function clearScene() {
+      sceneElements.forEach(el => el.remove());
+      sceneElements = [];
+      scene.style.background = '';
+      scene.classList.remove('active');
+    }
+
+    function buildScene(genre) {
+      clearScene();
+      const config = genreScenes[genre];
+      if (!config) return;
+
+      scene.style.background = config.bg;
+      scene.classList.add('active');
+
+      // Fade out video, show scene
+      bgVideo.style.transition = 'opacity 1.5s ease';
+      bgVideo.style.opacity = '0.15';
+      videoOverlay.style.transition = 'opacity 1.5s ease';
+      videoOverlay.style.opacity = '0.8';
+
+      config.effects.forEach(effect => {
+        switch (effect) {
+          case 'particles':
+            for (let i = 0; i < 30; i++) {
+              const p = document.createElement('div');
+              p.className = 'particle';
+              const size = 2 + Math.random() * 5;
+              p.style.width = size + 'px';
+              p.style.height = size + 'px';
+              p.style.left = Math.random() * 100 + '%';
+              p.style.background = config.particleColor || 'rgba(167, 139, 250, 0.4)';
+              p.style.boxShadow = config.particleShadow || 'none';
+              p.style.animationDuration = (8 + Math.random() * 14) + 's';
+              p.style.animationDelay = (Math.random() * 12) + 's';
+              scene.appendChild(p);
+              sceneElements.push(p);
+            }
+            break;
+
+          case 'fireflies':
+            for (let i = 0; i < 15; i++) {
+              const f = document.createElement('div');
+              f.className = 'firefly';
+              const size = 3 + Math.random() * 4;
+              f.style.width = size + 'px';
+              f.style.height = size + 'px';
+              f.style.left = (10 + Math.random() * 80) + '%';
+              f.style.top = (10 + Math.random() * 80) + '%';
+              f.style.background = config.fireflyColor || 'rgba(250, 220, 130, 0.7)';
+              f.style.boxShadow = config.fireflyShadow || '0 0 10px rgba(250, 204, 100, 0.5)';
+              f.style.animationDuration = (3 + Math.random() * 5) + 's';
+              f.style.animationDelay = (Math.random() * 6) + 's';
+              scene.appendChild(f);
+              sceneElements.push(f);
+            }
+            break;
+
+          case 'shooting-stars':
+            for (let i = 0; i < 5; i++) {
+              const s = document.createElement('div');
+              s.className = 'shooting-star';
+              s.style.top = (Math.random() * 60) + '%';
+              s.style.left = '-100px';
+              s.style.animationDuration = (3 + Math.random() * 4) + 's';
+              s.style.animationDelay = (Math.random() * 10) + 's';
+              scene.appendChild(s);
+              sceneElements.push(s);
+            }
+            break;
+
+          case 'rain':
+            for (let i = 0; i < 80; i++) {
+              const r = document.createElement('div');
+              r.className = 'raindrop';
+              r.style.left = Math.random() * 100 + '%';
+              r.style.height = (15 + Math.random() * 25) + 'px';
+              r.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+              r.style.animationDelay = (Math.random() * 2) + 's';
+              scene.appendChild(r);
+              sceneElements.push(r);
+            }
+            break;
+
+          case 'fog':
+            for (let i = 0; i < 3; i++) {
+              const f = document.createElement('div');
+              f.className = 'fog';
+              f.style.top = (20 + i * 25) + '%';
+              f.style.animationDuration = (15 + i * 5) + 's';
+              f.style.animationDelay = (i * 3) + 's';
+              scene.appendChild(f);
+              sceneElements.push(f);
+            }
+            break;
+
+          case 'lightning':
+            const l = document.createElement('div');
+            l.className = 'lightning';
+            l.style.animationDelay = (Math.random() * 3) + 's';
+            scene.appendChild(l);
+            sceneElements.push(l);
+            break;
+
+          case 'embers':
+            for (let i = 0; i < 35; i++) {
+              const e = document.createElement('div');
+              e.className = 'ember';
+              const size = 2 + Math.random() * 4;
+              e.style.width = size + 'px';
+              e.style.height = size + 'px';
+              e.style.left = Math.random() * 100 + '%';
+              e.style.background = config.emberColor || 'rgba(251, 146, 36, 0.7)';
+              e.style.boxShadow = config.emberShadow || 'none';
+              e.style.borderRadius = '50%';
+              e.style.animationDuration = (4 + Math.random() * 8) + 's';
+              e.style.animationDelay = (Math.random() * 8) + 's';
+              scene.appendChild(e);
+              sceneElements.push(e);
+            }
+            break;
+
+          case 'bubbles':
+            for (let i = 0; i < 20; i++) {
+              const b = document.createElement('div');
+              b.className = 'bubble';
+              const size = 10 + Math.random() * 30;
+              b.style.width = size + 'px';
+              b.style.height = size + 'px';
+              b.style.left = Math.random() * 100 + '%';
+              b.style.animationDuration = (6 + Math.random() * 10) + 's';
+              b.style.animationDelay = (Math.random() * 8) + 's';
+              scene.appendChild(b);
+              sceneElements.push(b);
+            }
+            break;
+        }
+      });
+    }
+
+    function selectGenre(chip) {
+      document.querySelectorAll('#genres .chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      selectedGenre = chip.textContent;
+      buildScene(selectedGenre);
+    }
+
+    function selectAge(chip) {
+      document.querySelectorAll('#ages .chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      selectedAge = chip.dataset.age;
+    }
+
+    async function generate() {
+      const opening = document.getElementById('opening').value.trim();
+      const voiceId = document.getElementById('voice').value;
+      const btn = document.getElementById('generate');
+      const errorEl = document.getElementById('error');
+
+      if (!selectedGenre) {
+        errorEl.textContent = 'Please select a genre.';
+        errorEl.classList.add('visible');
+        return;
+      }
+      if (!opening) {
+        errorEl.textContent = 'Please write a few lines to start your story.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      errorEl.classList.remove('visible');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Generating...';
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            genre: selectedGenre,
+            ageGroup: selectedAge,
+            opening,
+            voiceId,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'Something went wrong');
+        }
+
+        audioData = data.audio;
+        storyWords = data.story.split(/(\s+)/);
+
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('narration-view').classList.add('visible');
+
+        startNarration();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.add('visible');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Story';
+      }
+    }
+
+    function startNarration() {
+      const container = document.getElementById('narration-text');
+      container.innerHTML = '';
+
+      const spans = [];
+      storyWords.forEach((w) => {
+        if (w.match(/^\s+$/)) {
+          container.appendChild(document.createTextNode(w));
+        } else {
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = w;
+          container.appendChild(span);
+          spans.push(span);
+        }
+      });
+
+      const audioEl = document.getElementById('audio');
+      audioEl.src = 'data:audio/mpeg;base64,' + audioData;
+      audioEl.load();
+
+      const playPromise = audioEl.play();
+      if (playPromise) {
+        playPromise.catch(() => {
+          spans.forEach(s => s.classList.add('visible'));
+        });
+      }
+
+      audioEl.addEventListener('loadedmetadata', function onMeta() {
+        audioEl.removeEventListener('loadedmetadata', onMeta);
+        const duration = audioEl.duration;
+        const interval = (duration * 1000) / spans.length;
+
+        if (wordTimer) clearInterval(wordTimer);
+        let idx = 0;
+        wordTimer = setInterval(() => {
+          if (idx < spans.length) {
+            spans[idx].classList.add('visible');
+            idx++;
+          } else {
+            clearInterval(wordTimer);
+          }
+        }, interval);
+      });
+
+      setTimeout(() => {
+        const revealed = container.querySelectorAll('.word.visible').length;
+        if (revealed === 0) {
+          let idx = 0;
+          if (wordTimer) clearInterval(wordTimer);
+          wordTimer = setInterval(() => {
+            if (idx < spans.length) {
+              spans[idx].classList.add('visible');
+              idx++;
+            } else {
+              clearInterval(wordTimer);
+            }
+          }, 120);
+        }
+      }, 2000);
+    }
+
+    function replay() {
+      startNarration();
+    }
+
+    function goBack() {
+      if (wordTimer) clearInterval(wordTimer);
+      const audioEl = document.getElementById('audio');
+      audioEl.pause();
+      audioEl.src = '';
+
+      document.getElementById('narration-view').classList.remove('visible');
+      document.getElementById('form-view').style.display = 'block';
+
+      // Restore video
+      clearScene();
+      bgVideo.style.opacity = '0.5';
+      videoOverlay.style.opacity = '1';
+    }
+  </script>
+</body>
+</html>
